@@ -29,6 +29,10 @@ plicinithart(void)
 
   // set this hart's S-mode priority threshold to 0.
   *(uint32 *)PLIC_SPRIORITY(hart) = 0;
+
+  // user-mode reads of cycle/time/instret trap (usertrap kills them):
+  // no clock reaches user space.
+  w_scounteren(0);
 }
 
 // ask the PLIC what interrupt we should serve.

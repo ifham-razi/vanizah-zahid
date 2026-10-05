@@ -13,3 +13,5 @@
 #define MAXPATH     128               // maximum file path name
 #define USERSTACK   1                 // user stack pages
 #define PIDMAX      1000              // highest PID
+#define MAXUSZ      (192 * 4096)      // memory quota: the largest user break
+#define NPIPE       (NFILE / 2)       // memory quota: pipe buffers at once

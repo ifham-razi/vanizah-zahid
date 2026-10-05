@@ -19,6 +19,11 @@ struct pipe {
   int writeopen; // write fd is still open
 };
 
+// memory quota: pipe buffers allocated, at most NPIPE (under npipelock;
+// zero-initialized, so it needs no initlock).
+static struct spinlock npipelock;
+static int npipe;
+
 int
 pipealloc(struct file **f0, struct file **f1)
 {
@@ -28,6 +33,13 @@ pipealloc(struct file **f0, struct file **f1)
   *f0 = *f1 = 0;
   if ((*f0 = filealloc()) == 0 || (*f1 = filealloc()) == 0)
     goto bad;
+  acquire(&npipelock);
+  if (npipe >= NPIPE) {
+    release(&npipelock);
+    goto bad;
+  }
+  npipe++;
+  release(&npipelock);
   if ((pi = (struct pipe *)kalloc()) == 0)
     goto bad;
   pi->readopen = 1;
@@ -69,6 +81,9 @@ pipeclose(struct pipe *pi, int writable)
   if (pi->readopen == 0 && pi->writeopen == 0) {
     release(&pi->lock);
     kfree((char *)pi);
+    acquire(&npipelock);
+    npipe--;
+    release(&npipelock);
   } else
     release(&pi->lock);
 }

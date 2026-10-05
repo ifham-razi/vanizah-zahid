@@ -281,6 +281,13 @@ r_stval()
   return x;
 }
 
+// Supervisor-mode Counter-Enable
+static inline void
+w_scounteren(uint64 x)
+{
+  asm volatile("csrw scounteren, %0" : : "r"(x));
+}
+
 // Machine-mode Counter-Enable
 static inline void
 w_mcounteren(uint64 x)

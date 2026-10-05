@@ -47,6 +47,10 @@ sys_sbrk(void)
   argint(1, &t);
   addr = myproc()->sz;
 
+  // memory quota: no process grows past MAXUSZ.
+  if (n > 0 && addr + n > MAXUSZ)
+    return -1;
+
   if (t == SBRK_EAGER || n < 0) {
     if (growproc(n) < 0) {
       return -1;

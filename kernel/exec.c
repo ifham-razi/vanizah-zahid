@@ -64,7 +64,8 @@ kexec(char *path, char **argv)
       continue;
     if (ph.memsz < ph.filesz)
       goto bad;
-    if (ph.vaddr + ph.memsz < ph.vaddr)
+    if (ph.vaddr + ph.memsz < ph.vaddr ||
+        ph.vaddr + ph.memsz > MAXUSZ - (USERSTACK + 1) * PGSIZE) // quota
       goto bad;
     if (ph.vaddr % PGSIZE != 0)
       goto bad;
