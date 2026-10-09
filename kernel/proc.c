@@ -12,7 +12,6 @@ struct proc proc[NPROC];
 
 struct proc *initproc;
 
-int nextpid = 1;
 struct spinlock pid_lock;
 
 extern void forkret(void);
@@ -55,6 +54,7 @@ procinit(void)
     initlock(&p->lock, "proc");
     p->state = UNUSED;
     p->kstack = KSTACK((int)(p - proc));
+    p->npid = (int)(p - proc);
   }
 }
 
@@ -89,24 +89,29 @@ myproc(void)
   return p;
 }
 
-static void
+// Hand p a pid.  Pids are partitioned by the parent's slot j: slot j
+// hands out j + NPROC, j + 2*NPROC, ... and never reuses one; userinit
+// (no parent) gets 1.  Fails (-1) when the slot's share is exhausted.
+static int
 allocpid(struct proc *p)
 {
-  struct proc *q;
+  struct proc *pp = myproc();
   int pid;
 
   acquire(&pid_lock);
-  for (;;) {
-    pid = nextpid;
-    nextpid = (pid == PIDMAX) ? 1 : pid + 1;
-    for (q = proc; q < &proc[NPROC]; q++)
-      if (q->pid == pid)
-        break;
-    if (q == &proc[NPROC])
-      break;
+  if (pp == 0) {
+    pid = 1;
+  } else {
+    if (pp->npid > PIDMAX - NPROC) {
+      release(&pid_lock);
+      return -1;
+    }
+    pp->npid += NPROC;
+    pid = pp->npid;
   }
   p->pid = pid;
   release(&pid_lock);
+  return 0;
 }
 
 // Look in the process table for an UNUSED proc.
@@ -129,7 +134,10 @@ allocproc(void)
   return 0;
 
 found:
-  allocpid(p);
+  if (allocpid(p) < 0) {
+    release(&p->lock);
+    return 0;
+  }
   p->state = USED;
 
   // Allocate a trapframe page.
